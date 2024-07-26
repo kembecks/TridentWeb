@@ -1,0 +1,100 @@
+step "test-trident-web" {
+    name = "Deploy Trident Website"
+    properties = {
+        Octopus.Action.MaxParallelism = "1"
+        Octopus.Action.TargetRoles = "trident-web"
+    }
+
+    action "remove-from-load-balancer" {
+        action_type = "Octopus.Script"
+        environments = ["staging", "production", "development"]
+        name = "Remove from load balancer"
+        properties = {
+            Octopus.Action.RunOnServer = "false"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                $machineName = $OctopusParameters["Octopus.Machine.Name"]
+                
+                Write-Host "Remove $machineName from the Load balancer"
+                
+                
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = ""
+    }
+
+    action "test-trident-web" {
+        action_type = "Octopus.TentaclePackage"
+        name = "test-trident-web"
+        properties = {
+            Octopus.Action.EnabledFeatures = "Octopus.Features.JsonConfigurationVariables"
+            Octopus.Action.Package.DownloadOnTentacle = "False"
+            Octopus.Action.Package.FeedId = "octopus-server-built-in"
+            Octopus.Action.Package.JsonConfigurationVariablesTargets = "c:\\temp\\appsettings.json"
+            Octopus.Action.Package.PackageId = "test-package"
+        }
+        worker_pool_variable = ""
+
+        packages {
+            acquisition_location = "Server"
+            feed = "octopus-server-built-in"
+            package_id = "test-package"
+            properties = {
+                SelectionMode = "immediate"
+            }
+        }
+    }
+
+    action "add-to-load-balancer" {
+        action_type = "Octopus.Script"
+        environments = ["staging", "production"]
+        name = "Add to load balancer "
+        properties = {
+            Octopus.Action.RunOnServer = "false"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                $machineName = $OctopusParameters["Octopus.Machine.Name"]
+                Write-Host "Adding $machineName back to the Load BAlancer"
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = ""
+    }
+}
+
+step "notify-dev-team" {
+    condition = "Always"
+    name = "Notify dev team"
+
+    action {
+        action_type = "Octopus.Email"
+        properties = {
+            Octopus.Action.Email.Body = "#{Notification.Body.Text}"
+            Octopus.Action.Email.Subject = "#{Notification.Subject.Text}"
+            Octopus.Action.Email.To = "kemdia.beckles@gmail.com"
+        }
+    }
+}
+
+step "send-slack-message-on-failure" {
+    condition = "Failure"
+    name = "Send Slack message on Failure"
+    properties = {
+        Octopus.Action.TargetRoles = "trident-web"
+    }
+
+    action {
+        properties = {
+            Octopus.Action.RunOnServer = "false"
+            Octopus.Action.Template.Id = "ActionTemplates-1"
+            Octopus.Action.Template.Version = "15"
+            ssn_Channel = "trident-deployment-notifications"
+            ssn_Color = "danger"
+            ssn_HookUrl = "#{Notification.Slack.Webhook.Url}"
+            ssn_IconUrl = "https://octopus.com/content/resources/favicon.png"
+            ssn_Username = "Trident deploy - Octopus Deploy"
+        }
+        worker_pool_variable = ""
+    }
+}
