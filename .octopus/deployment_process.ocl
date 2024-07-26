@@ -33,6 +33,7 @@ step "test-trident-web" {
             Octopus.Action.Package.FeedId = "octopus-server-built-in"
             Octopus.Action.Package.JsonConfigurationVariablesTargets = "c:\\temp\\appsettings.json"
             Octopus.Action.Package.PackageId = "test-package"
+            Octopus.Action.RunOnServer = "false"
         }
         worker_pool_variable = ""
 
@@ -70,9 +71,10 @@ step "notify-dev-team" {
     action {
         action_type = "Octopus.Email"
         properties = {
-            Octopus.Action.Email.Body = "#{Notification.Body.Text}"
+            Octopus.Action.Email.Body = "#{Notification.Body.Text} test "
             Octopus.Action.Email.Subject = "#{Notification.Subject.Text}"
             Octopus.Action.Email.To = "kemdia.beckles@gmail.com"
+            Octopus.Action.RunOnServer = "false"
         }
     }
 }
