@@ -14,7 +14,7 @@ step "test-trident-web" {
             Octopus.Action.Script.ScriptBody = <<-EOT
                 $machineName = $OctopusParameters["Octopus.Machine.Name"]
                 
-                Write-Host "Remove $machineName from the Load balancers"
+                Write-Host "Remove $machineName from the Load balancer"
                 
                 
                 EOT
